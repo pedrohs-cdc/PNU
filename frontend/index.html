@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PNU — Prontuário Unificado</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ── TELA DE LOGIN ── -->
+  <div id="screen-login" class="screen">
+    <div class="login-brand">
+      <div class="brand-tag">Sistema Municipal de Saúde</div>
+      <h1 class="brand-name">PNU</h1>
+      <p class="brand-sub">Prontuário Unificado. Todo o histórico clínico do paciente, em qualquer unidade da rede.</p>
+      <div class="brand-slogan">"Um histórico. Qualquer unidade."</div>
+    </div>
+    
+    <div class="login-form-wrap">
+      <div class="login-form-inner">
+        <h2>Acesso Institucional</h2>
+        <p>Identifique-se para acessar o prontuário.</p>
+
+        <form id="login-form">
+          <div class="field">
+            <label for="email">E-mail corporativo</label>
+            <input type="email" id="email" required autocomplete="email" placeholder="nome@pnu.local">
+          </div>
+          <div class="field">
+            <label for="senha">Senha</label>
+            <input type="password" id="senha" required autocomplete="current-password" placeholder="••••••••">
+          </div>
+          <button type="submit" class="btn-primary" id="login-btn">Entrar no Sistema</button>
+          <div id="login-error" class="hidden"></div>
+        </form>
+        
+        <div style="margin-top:40px; font-size:12px; color:var(--gray-4); padding-top:20px; border-top:1px solid var(--gray-2)">
+          <strong>Credenciais de Teste:</strong><br><br>
+          <em>Médico:</em> helena.martins@pnu.local<br>
+          <em>Recepção:</em> patricia.lima@pnu.local<br>
+          <em>Senha para todos:</em> pnu123
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── APP SHELL ── -->
+  <div id="screen-app" class="screen hidden">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="sidebar-brand-name">PNU</div>
+        <div class="sidebar-brand-sub">Prontuário Unificado</div>
+      </div>
+      
+      <div class="sidebar-user">
+        <span class="user-role" id="user-role">...</span>
+        <div class="user-name" id="user-name">Carregando...</div>
+        <div class="user-unit" id="user-unit">Sessão ativa</div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">Clínica</div>
+        <div class="nav-item active" data-page="busca">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Busca de Paciente
+        </div>
+        
+        <div class="nav-section-label" style="margin-top:20px">Sistema</div>
+        <div class="nav-item" data-page="config" data-role="medico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          Configurações
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="btn-logout" id="logout-btn">Encerrar Sessão</button>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <div class="topbar-title" id="topbar-title">Carregando...</div>
+          <div class="topbar-sub" id="topbar-sub"></div>
+        </div>
+      </header>
+
+      <!-- PAGE: BUSCA -->
+      <div id="page-busca" class="page page-section">
+        <div class="search-bar">
+          <input type="text" id="search-input" placeholder="Digite o CNS, CPF ou nome do paciente..." autocomplete="off">
+          <button id="search-btn">Buscar</button>
+        </div>
+        <div class="search-hint">
+          <strong>Modos automáticos:</strong> 15 dígitos para CNS, 11 dígitos para CPF, ou digite o nome (mín. 2 letras).
+        </div>
+        
+        <div id="search-results">
+          <!-- preenchido via JS -->
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <p>Utilize a barra acima para iniciar uma busca.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE: FICHA -->
+      <div id="page-ficha" class="page page-section hidden">
+        <div id="ficha-content">
+          <!-- preenchido via JS -->
+        </div>
+      </div>
+
+      <!-- PAGE: CONFIG -->
+      <div id="page-config" class="page page-section hidden">
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          <p>Configurações do sistema estarão disponíveis na v2.0.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

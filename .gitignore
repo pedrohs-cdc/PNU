@@ -1,0 +1,6 @@
+node_modules/
+.env
+*.log
+pnu-projeto.zip
+mnt/
+.pnu-db/

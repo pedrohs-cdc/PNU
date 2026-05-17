@@ -53,4 +53,4 @@ pmm/
 | 4 | Timeline unificada (cruza unidades) | ✅ testado |
 | 5 | Criar atendimento | ✅ testado |
 | 6 | Auditoria (log por paciente) | ✅ testado |
-| 7 | Interface | ✅ testado |
+| 7 | Interface | ❌ Pendente |

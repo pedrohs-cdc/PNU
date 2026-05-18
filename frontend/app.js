@@ -35,7 +35,7 @@ function showPage(name) {
 function toast(msg, type = 'info') {
   const el = document.createElement('div');
   el.className = `toast ${type}`;
-  el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span> ${msg}`;
+  el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span> ${esc(msg)}`;
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 3500);
 }
@@ -74,6 +74,15 @@ function formatCNS(cns) {
 function formatCPF(cpf) {
   if (!cpf) return '—';
   return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+}
+
+// Escapa qualquer valor antes de injetar em HTML (defesa contra XSS).
+// Aplicar em TODO dado vindo do backend / digitado pelo usuário.
+function esc(v) {
+  if (v === null || v === undefined) return '';
+  return String(v).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
 }
 
 // ── API ─────────────────────────────────────────────────────
@@ -160,18 +169,18 @@ async function handleSearch() {
       resultsEl.innerHTML = `
         <div class="empty-state">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <p>Nenhum paciente encontrado para <strong>"${q}"</strong></p>
+          <p>Nenhum paciente encontrado para <strong>"${esc(q)}"</strong></p>
         </div>`;
       return;
     }
 
     const modoTexto = { cns: 'CNS', cpf: 'CPF', nome: 'nome' }[modo] || modo;
-    resultsEl.innerHTML = `<div class="results-label">${total} resultado${total > 1 ? 's' : ''} — busca por ${modoTexto}</div>` +
+    resultsEl.innerHTML = `<div class="results-label">${total} resultado${total > 1 ? 's' : ''} — busca por ${esc(modoTexto)}</div>` +
       pacientes.map(p => `
-        <div class="patient-card" onclick="openFicha(${p.id})" tabindex="0" role="button" aria-label="Abrir ficha de ${p.nome}">
+        <div class="patient-card" onclick="openFicha(${Number(p.id)})" tabindex="0" role="button" aria-label="Abrir ficha de ${esc(p.nome)}">
           <div>
-            <div class="pc-name">${p.nome}</div>
-            <div class="pc-meta">CNS ${formatCNS(p.cns)} · CPF ${formatCPF(p.cpf)} · ${calcIdade(p.data_nascimento)} anos · ${p.sexo === 'M' ? 'Masculino' : p.sexo === 'F' ? 'Feminino' : 'Outro'}</div>
+            <div class="pc-name">${esc(p.nome)}</div>
+            <div class="pc-meta">CNS ${esc(formatCNS(p.cns))} · CPF ${esc(formatCPF(p.cpf))} · ${calcIdade(p.data_nascimento)} anos · ${p.sexo === 'M' ? 'Masculino' : p.sexo === 'F' ? 'Feminino' : 'Outro'}</div>
           </div>
           <span class="pc-arrow">›</span>
         </div>`
@@ -207,11 +216,11 @@ function renderFicha(p, alertas) {
   $('ficha-content').innerHTML = `
     <div class="ficha-header">
       <div>
-        <div class="ficha-name">${p.nome}</div>
-        ${p.nome_social ? `<div class="ficha-social">Nome social: ${p.nome_social}</div>` : ''}
+        <div class="ficha-name">${esc(p.nome)}</div>
+        ${p.nome_social ? `<div class="ficha-social">Nome social: ${esc(p.nome_social)}</div>` : ''}
         <div class="ficha-ids">
-          <span class="ficha-id"><strong>CNS</strong>${formatCNS(p.cns)}</span>
-          <span class="ficha-id"><strong>CPF</strong>${formatCPF(p.cpf)}</span>
+          <span class="ficha-id"><strong>CNS</strong>${esc(formatCNS(p.cns))}</span>
+          <span class="ficha-id"><strong>CPF</strong>${esc(formatCPF(p.cpf))}</span>
         </div>
       </div>
       <button class="btn-back" onclick="showPage('busca');setTopbar('Busca de Paciente','Pesquise por CNS, CPF ou nome')">← Voltar</button>
@@ -222,9 +231,9 @@ function renderFicha(p, alertas) {
       <div class="alertas-title">⚠ Alertas Clínicos</div>
       <div class="alertas-grid">
         ${alertas.map(a => `
-          <div class="alerta-badge ${a.severidade}" title="${a.tipo}">
+          <div class="alerta-badge ${esc(a.severidade)}" title="${esc(a.tipo)}">
             <span class="alerta-dot"></span>
-            <span><strong>${a.tipo}:</strong> ${a.descricao}</span>
+            <span><strong>${esc(a.tipo)}:</strong> ${esc(a.descricao)}</span>
           </div>`).join('')}
       </div>
     </div>` : ''}
@@ -234,74 +243,74 @@ function renderFicha(p, alertas) {
     <div class="dados-grid">
       <div class="dado-item"><div class="dado-label">Data de Nascimento</div><div class="dado-valor">${formatDate(p.data_nascimento)}</div></div>
       <div class="dado-item"><div class="dado-label">Idade</div><div class="dado-valor">${calcIdade(p.data_nascimento)} anos</div></div>
-      <div class="dado-item"><div class="dado-label">Sexo / Gênero</div><div class="dado-valor">${p.sexo === 'M' ? 'Masculino' : p.sexo === 'F' ? 'Feminino' : 'Outro'} / ${p.genero || 'Não informado'}</div></div>
-      <div class="dado-item"><div class="dado-label">Nacionalidade</div><div class="dado-valor">${p.nacionalidade || '—'}</div></div>
-      <div class="dado-item"><div class="dado-label">Naturalidade</div><div class="dado-valor">${p.naturalidade || '—'}</div></div>
+      <div class="dado-item"><div class="dado-label">Sexo / Gênero</div><div class="dado-valor">${p.sexo === 'M' ? 'Masculino' : p.sexo === 'F' ? 'Feminino' : 'Outro'} / ${esc(p.genero || 'Não informado')}</div></div>
+      <div class="dado-item"><div class="dado-label">Nacionalidade</div><div class="dado-valor">${esc(p.nacionalidade || '—')}</div></div>
+      <div class="dado-item"><div class="dado-label">Naturalidade</div><div class="dado-valor">${esc(p.naturalidade || '—')}</div></div>
     </div>
 
     <!-- FILIAÇÃO -->
     <div class="section-title">Filiação</div>
     <div class="dados-grid">
-      <div class="dado-item"><div class="dado-label">Nome da Mãe</div><div class="dado-valor">${p.nome_mae || '—'}</div></div>
-      <div class="dado-item"><div class="dado-label">Nome do Pai</div><div class="dado-valor">${p.nome_pai || '—'}</div></div>
-      <div class="dado-item"><div class="dado-label">Responsável Legal</div><div class="dado-valor">${p.responsavel_legal || '—'}</div></div>
+      <div class="dado-item"><div class="dado-label">Nome da Mãe</div><div class="dado-valor">${esc(p.nome_mae || '—')}</div></div>
+      <div class="dado-item"><div class="dado-label">Nome do Pai</div><div class="dado-valor">${esc(p.nome_pai || '—')}</div></div>
+      <div class="dado-item"><div class="dado-label">Responsável Legal</div><div class="dado-valor">${esc(p.responsavel_legal || '—')}</div></div>
     </div>
 
     <!-- DOCUMENTAÇÃO -->
     <div class="section-title">Documentação</div>
     <div class="dados-grid">
-      <div class="dado-item"><div class="dado-label">RG</div><div class="dado-valor">${p.rg || '—'}</div></div>
-      <div class="dado-item"><div class="dado-label">Certidão</div><div class="dado-valor">${p.certidao || '—'}</div></div>
-      <div class="dado-item"><div class="dado-label">RNE / RNI</div><div class="dado-valor">${p.rne_rni || '—'}</div></div>
+      <div class="dado-item"><div class="dado-label">RG</div><div class="dado-valor">${esc(p.rg || '—')}</div></div>
+      <div class="dado-item"><div class="dado-label">Certidão</div><div class="dado-valor">${esc(p.certidao || '—')}</div></div>
+      <div class="dado-item"><div class="dado-label">RNE / RNI</div><div class="dado-valor">${esc(p.rne_rni || '—')}</div></div>
     </div>
 
     <!-- DADOS CIVIS E FÍSICOS -->
     <div class="section-title">Dados Civis e Físicos</div>
     <div class="dados-grid">
-      <div class="dado-item"><div class="dado-label">Estado Civil</div><div class="dado-valor">${p.estado_civil || '—'}</div></div>
-      <div class="dado-item"><div class="dado-label">Escolaridade</div><div class="dado-valor">${p.escolaridade || '—'}</div></div>
-      <div class="dado-item"><div class="dado-label">Cor / Raça</div><div class="dado-valor">${p.cor_raca || '—'}</div></div>
-      <div class="dado-item"><div class="dado-label">Tipo Sanguíneo</div><div class="dado-valor">${p.tipo_sanguineo || '—'}</div></div>
+      <div class="dado-item"><div class="dado-label">Estado Civil</div><div class="dado-valor">${esc(p.estado_civil || '—')}</div></div>
+      <div class="dado-item"><div class="dado-label">Escolaridade</div><div class="dado-valor">${esc(p.escolaridade || '—')}</div></div>
+      <div class="dado-item"><div class="dado-label">Cor / Raça</div><div class="dado-valor">${esc(p.cor_raca || '—')}</div></div>
+      <div class="dado-item"><div class="dado-label">Tipo Sanguíneo</div><div class="dado-valor">${esc(p.tipo_sanguineo || '—')}</div></div>
     </div>
 
     <!-- CONTATOS E ENDEREÇO -->
     <div class="section-title">Contatos e Endereço</div>
     <div class="dados-grid">
-      <div class="dado-item"><div class="dado-label">Telefone Principal</div><div class="dado-valor">${p.telefone_principal || '—'}</div></div>
-      <div class="dado-item"><div class="dado-label">Contato de Emergência</div><div class="dado-valor">${p.contato_emergencia || '—'}</div></div>
-      <div class="dado-item"><div class="dado-label">E-mail</div><div class="dado-valor">${p.email || '—'}</div></div>
-      <div class="dado-item" style="grid-column:1/-1"><div class="dado-label">Endereço Completo</div><div class="dado-valor">${[p.rua, p.numero, p.bairro, p.cidade, p.estado, p.cep].filter(Boolean).join(', ') || '—'}</div></div>
+      <div class="dado-item"><div class="dado-label">Telefone Principal</div><div class="dado-valor">${esc(p.telefone_principal || '—')}</div></div>
+      <div class="dado-item"><div class="dado-label">Contato de Emergência</div><div class="dado-valor">${esc(p.contato_emergencia || '—')}</div></div>
+      <div class="dado-item"><div class="dado-label">E-mail</div><div class="dado-valor">${esc(p.email || '—')}</div></div>
+      <div class="dado-item" style="grid-column:1/-1"><div class="dado-label">Endereço Completo</div><div class="dado-valor">${esc([p.rua, p.numero, p.bairro, p.cidade, p.estado, p.cep].filter(Boolean).join(', ') || '—')}</div></div>
     </div>
 
     <!-- INFORMAÇÕES MÉDICAS -->
     <div class="section-title">Informações Médicas Importantes</div>
     <div class="dados-grid">
-      <div class="dado-item"><div class="dado-label">Alergias</div><div class="dado-valor">${p.alergias || 'Nenhuma'}</div></div>
-      <div class="dado-item"><div class="dado-label">Doenças Crônicas</div><div class="dado-valor">${p.doencas_cronicas || 'Nenhuma'}</div></div>
-      <div class="dado-item"><div class="dado-label">Deficiências</div><div class="dado-valor">${p.deficiencias || 'Nenhuma'}</div></div>
-      <div class="dado-item"><div class="dado-label">Uso Contínuo de Medicamentos</div><div class="dado-valor">${p.medicamentos_continuos || 'Nenhum'}</div></div>
-      <div class="dado-item" style="grid-column:2/-1"><div class="dado-label">Histórico Cirúrgico</div><div class="dado-valor">${p.historico_cirurgico || 'Nenhum'}</div></div>
+      <div class="dado-item"><div class="dado-label">Alergias</div><div class="dado-valor">${esc(p.alergias || 'Nenhuma')}</div></div>
+      <div class="dado-item"><div class="dado-label">Doenças Crônicas</div><div class="dado-valor">${esc(p.doencas_cronicas || 'Nenhuma')}</div></div>
+      <div class="dado-item"><div class="dado-label">Deficiências</div><div class="dado-valor">${esc(p.deficiencias || 'Nenhuma')}</div></div>
+      <div class="dado-item"><div class="dado-label">Uso Contínuo de Medicamentos</div><div class="dado-valor">${esc(p.medicamentos_continuos || 'Nenhum')}</div></div>
+      <div class="dado-item" style="grid-column:2/-1"><div class="dado-label">Histórico Cirúrgico</div><div class="dado-valor">${esc(p.historico_cirurgico || 'Nenhum')}</div></div>
     </div>
 
     <!-- INFORMAÇÕES HOSPITALARES -->
     <div class="section-title">Informações Hospitalares</div>
     <div class="dados-grid" style="margin-bottom: 32px;">
-      <div class="dado-item"><div class="dado-label">Unidade Vinculada</div><div class="dado-valor">${p.unidade_vinculada_nome || '—'}</div></div>
-      <div class="dado-item"><div class="dado-label">Nº do Prontuário</div><div class="dado-valor">${p.numero_prontuario || '—'}</div></div>
-      <div class="dado-item"><div class="dado-label">Convênio Médico</div><div class="dado-valor">${p.convenio_medico || '—'}</div></div>
+      <div class="dado-item"><div class="dado-label">Unidade Vinculada</div><div class="dado-valor">${esc(p.unidade_vinculada_nome || '—')}</div></div>
+      <div class="dado-item"><div class="dado-label">Nº do Prontuário</div><div class="dado-valor">${esc(p.numero_prontuario || '—')}</div></div>
+      <div class="dado-item"><div class="dado-label">Convênio Médico</div><div class="dado-valor">${esc(p.convenio_medico || '—')}</div></div>
       <div class="dado-item"><div class="dado-label">Data do Primeiro Atendimento</div><div class="dado-valor">${formatDateTime(p.data_primeiro_atendimento)}</div></div>
       <div class="dado-item"><div class="dado-label">Último Atendimento</div><div class="dado-valor">${formatDateTime(p.data_ultimo_atendimento)}</div></div>
       <div class="dado-item"><div class="dado-label">Status do Paciente</div><div class="dado-valor">
         <span style="display:inline-block;padding:2px 8px;border-radius:12px;background:${p.status_paciente === 'Ativo' ? '#EBF9F4' : '#FEF0EE'};color:${p.status_paciente === 'Ativo' ? 'var(--green)' : 'var(--red)'};font-size:12px;font-weight:700;">
-          ${p.status_paciente || 'Desconhecido'}
+          ${esc(p.status_paciente || 'Desconhecido')}
         </span>
       </div></div>
     </div>
 
     <div class="tabs">
-      <button class="tab-btn ${state.currentTab === 'timeline' ? 'active' : ''}" onclick="setTab('timeline',${p.id})">📋 Timeline Unificada</button>
-      ${isMedico ? `<button class="tab-btn ${state.currentTab === 'atendimento' ? 'active' : ''}" onclick="setTab('atendimento',${p.id})">➕ Novo Atendimento</button>` : ''}
-      ${isMedico ? `<button class="tab-btn ${state.currentTab === 'log' ? 'active' : ''}" onclick="setTab('log',${p.id})">🔒 Log de Acesso</button>` : ''}
+      <button class="tab-btn ${state.currentTab === 'timeline' ? 'active' : ''}" onclick="setTab('timeline',${Number(p.id)})">📋 Timeline Unificada</button>
+      ${isMedico ? `<button class="tab-btn ${state.currentTab === 'atendimento' ? 'active' : ''}" onclick="setTab('atendimento',${Number(p.id)})">➕ Novo Atendimento</button>` : ''}
+      ${isMedico ? `<button class="tab-btn ${state.currentTab === 'log' ? 'active' : ''}" onclick="setTab('log',${Number(p.id)})">🔒 Log de Acesso</button>` : ''}
     </div>
     <div id="tab-content"></div>
   `;
@@ -400,33 +409,33 @@ function renderTimelineItems(listEl, eventos, perfil) {
       if (e.tipo === 'Consulta') {
         extraFieldsHTML = `
           <div class="tc-fields-grid">
-            ${e.sintomas ? `<div class="tc-field"><div class="tc-field-label">Sintomas Relatados</div><div class="tc-field-value">${e.sintomas}</div></div>` : ''}
-            ${e.diagnostico ? `<div class="tc-field"><div class="tc-field-label">Diagnóstico</div><div class="tc-field-value"><strong>${e.diagnostico}</strong></div></div>` : ''}
-            ${e.observacoes ? `<div class="tc-field tc-fields-grid-full"><div class="tc-field-label">Observações Clínicas</div><div class="tc-field-value">${e.observacoes}</div></div>` : ''}
-            ${e.evolucao_medica ? `<div class="tc-field tc-fields-grid-full"><div class="tc-field-box"><div class="tc-field-label">Evolução Médica</div><div class="tc-field-value">${e.evolucao_medica}</div></div></div>` : ''}
+            ${e.sintomas ? `<div class="tc-field"><div class="tc-field-label">Sintomas Relatados</div><div class="tc-field-value">${esc(e.sintomas)}</div></div>` : ''}
+            ${e.diagnostico ? `<div class="tc-field"><div class="tc-field-label">Diagnóstico</div><div class="tc-field-value"><strong>${esc(e.diagnostico)}</strong></div></div>` : ''}
+            ${e.observacoes ? `<div class="tc-field tc-fields-grid-full"><div class="tc-field-label">Observações Clínicas</div><div class="tc-field-value">${esc(e.observacoes)}</div></div>` : ''}
+            ${e.evolucao_medica ? `<div class="tc-field tc-fields-grid-full"><div class="tc-field-box"><div class="tc-field-label">Evolução Médica</div><div class="tc-field-value">${esc(e.evolucao_medica)}</div></div></div>` : ''}
           </div>
         `;
       } else if (e.tipo === 'Exame') {
         extraFieldsHTML = `
           <div class="tc-fields-grid">
-            <div class="tc-field"><div class="tc-field-label">Categoria de Exame</div><div class="tc-field-value">${e.categoria_exame || 'Não especificada'}</div></div>
-            ${e.resultados ? `<div class="tc-field"><div class="tc-field-label">Resultados</div><div class="tc-field-value">${e.resultados}</div></div>` : ''}
-            ${e.laudos ? `<div class="tc-field tc-fields-grid-full"><div class="tc-field-box box-sucesso"><div class="tc-field-label">Laudo Oficial</div><div class="tc-field-value">${e.laudos}</div></div></div>` : ''}
+            <div class="tc-field"><div class="tc-field-label">Categoria de Exame</div><div class="tc-field-value">${esc(e.categoria_exame || 'Não especificada')}</div></div>
+            ${e.resultados ? `<div class="tc-field"><div class="tc-field-label">Resultados</div><div class="tc-field-value">${esc(e.resultados)}</div></div>` : ''}
+            ${e.laudos ? `<div class="tc-field tc-fields-grid-full"><div class="tc-field-box box-sucesso"><div class="tc-field-label">Laudo Oficial</div><div class="tc-field-value">${esc(e.laudos)}</div></div></div>` : ''}
           </div>
         `;
       } else if (e.tipo === 'Medicação') {
         extraFieldsHTML = `
           <div class="tc-fields-grid">
-            <div class="tc-field"><div class="tc-field-label">Medicamento Prescrito</div><div class="tc-field-value"><strong>💊 ${e.medicamentos_prescritos || '—'}</strong></div></div>
-            <div class="tc-field"><div class="tc-field-label">Dosagem</div><div class="tc-field-value">${e.dosagem || '—'}</div></div>
-            <div class="tc-field"><div class="tc-field-label">Frequência</div><div class="tc-field-value">${e.frequencia || '—'}</div></div>
-            <div class="tc-field"><div class="tc-field-label">Duração</div><div class="tc-field-value">${e.duracao || '—'}</div></div>
+            <div class="tc-field"><div class="tc-field-label">Medicamento Prescrito</div><div class="tc-field-value"><strong>💊 ${esc(e.medicamentos_prescritos || '—')}</strong></div></div>
+            <div class="tc-field"><div class="tc-field-label">Dosagem</div><div class="tc-field-value">${esc(e.dosagem || '—')}</div></div>
+            <div class="tc-field"><div class="tc-field-label">Frequência</div><div class="tc-field-value">${esc(e.frequencia || '—')}</div></div>
+            <div class="tc-field"><div class="tc-field-label">Duração</div><div class="tc-field-value">${esc(e.duracao || '—')}</div></div>
           </div>
         `;
       } else if (e.tipo === 'Internação') {
         extraFieldsHTML = `
           <div class="tc-fields-grid">
-            <div class="tc-field"><div class="tc-field-label">Setor / Ala</div><div class="tc-field-value">🏢 ${e.setor || '—'}</div></div>
+            <div class="tc-field"><div class="tc-field-label">Setor / Ala</div><div class="tc-field-value">🏢 ${esc(e.setor || '—')}</div></div>
             <div class="tc-field"><div class="tc-field-label">Status da Internação</div><div class="tc-field-value">${e.data_alta ? 'Alta Concedida' : 'Internado'}</div></div>
             <div class="tc-field"><div class="tc-field-label">Entrada</div><div class="tc-field-value">${formatDateTime(e.data_entrada)}</div></div>
             <div class="tc-field"><div class="tc-field-label">Alta</div><div class="tc-field-value">${formatDateTime(e.data_alta)}</div></div>
@@ -435,16 +444,16 @@ function renderTimelineItems(listEl, eventos, perfil) {
       } else if (e.tipo === 'Observação') {
         extraFieldsHTML = `
           <div class="tc-fields-grid">
-            ${e.recomendacoes ? `<div class="tc-field tc-fields-grid-full"><div class="tc-field-label">Recomendações Profissionais</div><div class="tc-field-value">${e.recomendacoes}</div></div>` : ''}
-            ${e.retornos ? `<div class="tc-field"><div class="tc-field-label">Previsão de Retorno</div><div class="tc-field-value">📅 ${e.retornos}</div></div>` : ''}
+            ${e.recomendacoes ? `<div class="tc-field tc-fields-grid-full"><div class="tc-field-label">Recomendações Profissionais</div><div class="tc-field-value">${esc(e.recomendacoes)}</div></div>` : ''}
+            ${e.retornos ? `<div class="tc-field"><div class="tc-field-label">Previsão de Retorno</div><div class="tc-field-value">📅 ${esc(e.retornos)}</div></div>` : ''}
           </div>
         `;
       }
     } else {
       extraFieldsHTML = `
         <div class="tc-fields-grid">
-          <div class="tc-field"><div class="tc-field-label">Tipo</div><div class="tc-field-value">${e.tipo}</div></div>
-          ${e.setor ? `<div class="tc-field"><div class="tc-field-label">Setor Vinculado</div><div class="tc-field-value">${e.setor}</div></div>` : ''}
+          <div class="tc-field"><div class="tc-field-label">Tipo</div><div class="tc-field-value">${esc(e.tipo)}</div></div>
+          ${e.setor ? `<div class="tc-field"><div class="tc-field-label">Setor Vinculado</div><div class="tc-field-value">${esc(e.setor)}</div></div>` : ''}
         </div>
       `;
     }
@@ -456,17 +465,17 @@ function renderTimelineItems(listEl, eventos, perfil) {
           <div class="tc-header">
             <div>
               <div class="tc-date">${formatDateTime(e.data_hora)}</div>
-              <div class="tc-title">${e.descricao || '—'}</div>
+              <div class="tc-title">${esc(e.descricao || '—')}</div>
             </div>
-            <span class="tc-tipo tipo-${cleanTipo}">${e.tipo}</span>
+            <span class="tc-tipo tipo-${esc(cleanTipo)}">${esc(e.tipo)}</span>
           </div>
           ${extraFieldsHTML}
           <div class="tc-unidade" style="margin-top: 14px;">
-            <span>🏥 ${e.unidade}</span>
+            <span>🏥 ${esc(e.unidade)}</span>
             <span style="opacity:.6">·</span>
-            <span>${e.unidade_tipo} · ${e.natureza}</span>
+            <span>${esc(e.unidade_tipo)} · ${esc(e.natureza)}</span>
             <span style="opacity:.6">·</span>
-            <span>👤 ${e.profissional}</span>
+            <span>👤 ${esc(e.profissional)}</span>
           </div>
         </div>
       </div>`;
@@ -672,10 +681,10 @@ function renderLog(el, log) {
       <tbody>
         ${log.map(l => `
           <tr>
-            <td><span class="log-acao">${l.acao}</span></td>
-            <td>${l.profissional}</td>
-            <td>${l.role}</td>
-            <td>${l.unidade}</td>
+            <td><span class="log-acao">${esc(l.acao)}</span></td>
+            <td>${esc(l.profissional)}</td>
+            <td>${esc(l.role)}</td>
+            <td>${esc(l.unidade)}</td>
             <td style="font-family:var(--mono);font-size:12px">${formatDateTime(l.timestamp)}</td>
           </tr>`).join('')}
       </tbody>
